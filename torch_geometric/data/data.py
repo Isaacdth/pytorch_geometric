@@ -42,6 +42,7 @@ from torch_geometric.typing import (
     TensorFrame,
 )
 from torch_geometric.utils import is_sparse, select, subgraph
+from typing import Union, Optional, List
 
 
 class BaseData:
@@ -354,13 +355,18 @@ class BaseData:
         """
         return self.apply(lambda x: x.contiguous(), *args)
 
-    def to(self, device: Union[int, str], *args: str,
-           non_blocking: bool = False):
+    def to(self, device: Union[int, str, List[Union[int, str]]], *args: str,
+        non_blocking: bool = False):
         r"""Performs tensor device conversion, either for all attributes or
         only the ones given in :obj:`*args`.
         """
-        return self.apply(
-            lambda x: x.to(device=device, non_blocking=non_blocking), *args)
+        if isinstance(device, list):
+            for dev in device:
+                self.apply(lambda x: x.to(device=dev, non_blocking=non_blocking), *args)
+            return self
+        else:
+            return self.apply(
+                lambda x: x.to(device=device, non_blocking=non_blocking), *args)
 
     def cpu(self, *args: str):
         r"""Copies attributes to CPU memory, either for all attributes or only
@@ -368,15 +374,19 @@ class BaseData:
         """
         return self.apply(lambda x: x.cpu(), *args)
 
-    def cuda(self, device: Optional[Union[int, str]] = None, *args: str,
-             non_blocking: bool = False):
+    def cuda(self, device: Optional[Union[int, str, List[Union[int, str]]]] = None, *args: str,
+            non_blocking: bool = False):
         r"""Copies attributes to CUDA memory, either for all attributes or only
         the ones given in :obj:`*args`.
         """
         # Some PyTorch tensor like objects require a default value for `cuda`:
         device = 'cuda' if device is None else device
-        return self.apply(lambda x: x.cuda(device, non_blocking=non_blocking),
-                          *args)
+        if isinstance(device, list):
+            for dev in device:
+                self.apply(lambda x: x.cuda(dev, non_blocking=non_blocking), *args)
+            return self
+        else:
+            return self.apply(lambda x: x.cuda(device, non_blocking=non_blocking), *args)
 
     def pin_memory(self, *args: str):
         r"""Copies attributes to pinned memory, either for all attributes or
